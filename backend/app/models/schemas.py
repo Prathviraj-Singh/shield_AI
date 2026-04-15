@@ -1,4 +1,9 @@
 from pydantic import BaseModel
+from typing import List
+
+class ActionStep(BaseModel):
+    tool: str
+    observation: str
 
 class DetectRequest(BaseModel):
     message: str
@@ -9,3 +14,4 @@ class DetectResponse(BaseModel):
     scam_type: str
     confidence: float
     guidance: str
+    actions_taken: List[ActionStep] = []

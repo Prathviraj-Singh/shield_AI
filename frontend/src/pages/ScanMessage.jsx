@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { motion } from 'framer-motion';
 import ResultBadge from '../components/ResultBadge';
 import { useScamDetect } from '../hooks/useScamDetect';
 import { useToast } from '../contexts/ToastContext';
@@ -100,7 +101,44 @@ export default function ScanMessage() {
         {/* Results Column */}
         <div className="lg:col-span-2">
           {result ? (
-            <ResultBadge result={result} />
+            <div className="space-y-6">
+              <ResultBadge result={result} />
+              
+              {/* Agent Actions Timeline */}
+              {result.actions_taken && result.actions_taken.length > 0 && (
+                <div className="bg-gray-800/40 backdrop-blur-sm p-6 rounded-2xl border border-gray-700/60 shadow-xl">
+                  <h3 className="text-sm font-bold text-gray-300 mb-6 uppercase tracking-widest flex items-center">
+                    <svg className="w-5 h-5 mr-3 text-indigo-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
+                    </svg>
+                    Agent Actions
+                  </h3>
+                  <div className="relative pl-6 space-y-8 border-l-2 border-gray-700/50 ml-2">
+                    {result.actions_taken.map((action, idx) => (
+                      <motion.div
+                        initial={{ opacity: 0, y: 15 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ delay: idx * 0.15, duration: 0.4, ease: "easeOut" }}
+                        key={idx}
+                        className="relative"
+                      >
+                        <div className="absolute -left-[35px] top-1 rounded-full bg-green-500/20 p-1 border border-green-500/50 shadow-sm shadow-green-500/20">
+                          <svg className="w-3 h-3 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7" />
+                          </svg>
+                        </div>
+                        <h4 className="text-sm font-bold text-white mb-2">
+                           Step {idx + 1} — <span className="text-blue-400">{action.tool.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}</span>
+                        </h4>
+                        <p className="text-sm text-gray-400 leading-relaxed bg-gray-900/50 p-4 rounded-xl border border-gray-800 shadow-inner">
+                           {action.observation}
+                        </p>
+                      </motion.div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
           ) : (
             <div className="h-full min-h-[400px] border-2 border-dashed border-gray-700 rounded-2xl flex flex-col items-center justify-center text-gray-500 bg-gray-800/30 p-8 text-center transition-all bg-[length:20px_20px] bg-grid-gray-800/[0.2]">
               <div className="p-4 bg-gray-800/50 rounded-full mb-6">

@@ -104,8 +104,8 @@ export default function Home() {
               <div className="bg-orange-500/10 w-14 h-14 rounded-xl flex items-center justify-center mb-6 group-hover:scale-110 transition-transform">
                 <svg className="w-7 h-7 text-orange-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 12a9 9 0 01-9 9m9-9a9 9 0 00-9-9m9 9H3m9 9a9 9 0 01-9-9m9 9c1.657 0 3-4.03 3-9s-1.343-9-3-9m0 18c-1.657 0-3-4.03-3-9s1.343-9 3-9m-9 9a9 9 0 019-9" /></svg>
               </div>
-              <h3 className="text-xl font-bold text-white mb-3">Browser Integration</h3>
-              <p className="text-gray-400 text-sm leading-relaxed">Upcoming Chrome Extension maps seamlessly to your Dashboard, scanning web WhatsApp and shady links proactively.</p>
+              <h3 className="text-xl font-bold text-white mb-3">Agentic AI Workflows</h3>
+              <p className="text-gray-400 text-sm leading-relaxed">Built on a native ReAct loop, our system autonomously calls local keywords, triggers API evaluations, and dispatches Twilio alerts automatically.</p>
             </motion.div>
           </motion.div>
         </div>
