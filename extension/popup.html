@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>ShieldAI</title>
+  <style>
+    body { width: 320px; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: #111827; color: #fff; padding: 16px; margin: 0; }
+    h2 { margin-top: 0; font-size: 18px; display: flex; align-items: center; gap: 8px; color: #60a5fa; border-bottom: 1px solid #1f2937; padding-bottom: 12px; }
+    .container { display: flex; flex-direction: column; gap: 12px; }
+    textarea { width: 100%; box-sizing: border-box; background: #1f2937; border: 1px solid #374151; color: white; border-radius: 8px; padding: 10px; height: 100px; resize: none; outline: none; transition: border-color 0.2s; }
+    textarea:focus { border-color: #3b82f6; }
+    button { width: 100%; background: #2563eb; color: white; border: none; padding: 12px; border-radius: 8px; font-weight: bold; cursor: pointer; transition: background 0.2s; }
+    button:hover { background: #1d4ed8; }
+    button:disabled { background: #4b5563; cursor: not-allowed; }
+    #result { display: none; padding: 12px; border-radius: 8px; animation: slideIn 0.3s ease; }
+    @keyframes slideIn { from { opacity: 0; transform: translateY(-5px); } to { opacity: 1; transform: translateY(0); } }
+    #result.safe { background: rgba(16, 185, 129, 0.1); border: 1px solid rgba(16, 185, 129, 0.3); color: #34d399; }
+    #result.scam { background: rgba(239, 68, 68, 0.1); border: 1px solid rgba(239, 68, 68, 0.3); color: #f87171; }
+    .type { font-weight: 800; font-size: 11px; text-transform: uppercase; letter-spacing: 1px; opacity: 0.9; margin-bottom: 6px; display: inline-block; padding: 2px 6px; border-radius: 4px; border: 1px solid currentColor; }
+    .res-title { font-weight: 600; font-size: 15px; margin-bottom: 4px; }
+    .guidance { font-size: 13px; color: #d1d5db; line-height: 1.4; }
+  </style>
+</head>
+<body>
+  <h2>
+    <svg width="22" height="22" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/></svg>
+    ShieldAI Detector
+  </h2>
+  
+  <div class="container">
+    <textarea id="message" placeholder="Paste suspicious SMS, WhatsApp, or Email block here..."></textarea>
+    <button id="checkBtn">Check Now</button>
+    
+    <div id="result">
+      <span class="type" id="resType"></span>
+      <div class="res-title" id="resText"></div>
+      <div class="guidance" id="resGuidance"></div>
+    </div>
+  </div>
+
+  <script src="popup.js"></script>
+</body>
+</html>

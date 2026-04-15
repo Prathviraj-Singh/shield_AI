@@ -1,0 +1,24 @@
+{
+  "manifest_version": 3,
+  "name": "ShieldAI Detector",
+  "version": "1.0.0",
+  "description": "AI-powered cyber safety agent to detect scams and phishing.",
+  "permissions": [
+    "activeTab",
+    "storage",
+    "notifications"
+  ],
+  "action": {
+    "default_popup": "popup.html",
+    "default_title": "ShieldAI Detector"
+  },
+  "content_scripts": [
+    {
+      "matches": ["*://mail.google.com/*"],
+      "js": ["content.js"]
+    }
+  ],
+  "background": {
+    "service_worker": "background.js"
+  }
+}
