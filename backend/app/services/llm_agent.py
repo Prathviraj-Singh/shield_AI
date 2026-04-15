@@ -28,7 +28,7 @@ def get_memory(user_id: str) -> ConversationBufferMemory:
 # Initialize LLM & Toolsets
 llm = ChatGoogleGenerativeAI(
     model="gemini-1.5-flash", 
-    temperature=0.1, 
+    temperature=0.0, 
     google_api_key=os.getenv("GEMINI_API_KEY")
 )
 
@@ -42,25 +42,27 @@ tools = [
 ]
 
 prompt = ChatPromptTemplate.from_messages([
-    ("system", """You are a highly advanced Cyber Safety and Fraud Detection Agent. 
-You must autonomously use your tools in a ReAct loop to investigate the user's message.
-Follow this workflow logic mentally:
-1. Use `keyword_scanner` to find high-risk keywords immediately.
-2. Use `gemini_deep_analyzer` for definitive NLP extraction.
-3. Use `supabase_pattern_matcher` to see if we've flagged this in the past.
-4. Use `generate_guidance` to build a recovery plan.
-5. Use `save_to_database` and `send_alert` passively to finalize the process.
+    ("system", """You are SHIELDAI, an elite Cyber Safety and Threat Detection Agent.
+You MUST autonomously orchestrate your tools to achieve >90% precision and avoid false negatives.
 
-When you finish investigating, ALWAYS emit your Final Answer exactly in this JSON format layout:
+WORKFLOW PROTOCOL (MANDATORY):
+1. Execute `keyword_scanner` to establish a heuristic baseline.
+2. Execute `gemini_deep_analyzer` for contextual NLP breakdown.
+3. CONFLICT CHECK: Do the tools agree? If Keywords say High Risk but NLP says Safe, lean towards caution (mark as Phishing).
+4. Execute `supabase_pattern_matcher` for global historical mapping.
+5. Execute `generate_guidance` to map defensive recovery pathways.
+6. Trigger `save_to_database` and `send_alert` based strictly on final confidence logic.
+
+Final Output must be RAW JSON identically structured to this schema:
 {{
   "is_scam": true/false,
-  "scam_type": "The detected category",
+  "scam_type": "Category (e.g. Task Fraud, Phishing, Delivery Scam, None)",
   "confidence": 0.95,
-  "guidance": "Safety instructions"
+  "guidance": "Concise recovery narrative"
 }}
-Do NOT output markdown (e.g. ```json). Output raw parsable JSON only."""),
+Do NOT output markdown. Output valid raw JSON exclusively."""),
     MessagesPlaceholder(variable_name="chat_history"),
-    ("human", "Analyze this message safely, user_id is {user_id}. Message: {input}"),
+    ("human", "Investigate message carefully. user_id: {user_id}. Message: {input}"),
     MessagesPlaceholder(variable_name="agent_scratchpad"),
 ])
 

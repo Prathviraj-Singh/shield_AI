@@ -27,12 +27,19 @@ export const supabase = {
     },
   },
   from: (table) => {
-    // Generate a mock chainable object returning empty data
+    // Robust Dummy Data representing historical detected Scams
+    const mockReports = [
+      { id: 1, created_at: new Date(Date.now() - 1000 * 60 * 5).toISOString(), message_text: "Dear SBI User, your KYC is pending. Click here to verify: http://sbi-kyc-verify-update.com", scam_type: "Phishing", confidence_score: 0.98, status: "blocked" },
+      { id: 2, created_at: new Date(Date.now() - 1000 * 60 * 45).toISOString(), message_text: "You have won ₹50,00,000 in KBC Jio Lottery! Send Rs 1000 processing fee to UPI immediately.", scam_type: "Lottery", confidence_score: 0.95, status: "blocked" },
+      { id: 3, created_at: new Date(Date.now() - 1000 * 60 * 60 * 2).toISOString(), message_text: "Your Amazon package is delayed. Pay customs charge of Rs 50 here: amazon-deliveries-hub.co.in", scam_type: "Delivery", confidence_score: 0.89, status: "blocked" },
+      { id: 4, created_at: new Date(Date.now() - 1000 * 60 * 60 * 24).toISOString(), message_text: "Hi Rohan, sending you the project files for tomorrow's meeting.", scam_type: "None", confidence_score: 0.05, status: "safe" }
+    ];
+
     const chainObj = {
       eq: () => chainObj,
       order: () => chainObj,
-      limit: async () => ({ data: [], error: null }),
-      then: (resolve) => resolve({ data: [], error: null })
+      limit: async () => ({ data: mockReports, error: null }),
+      then: (resolve) => resolve({ data: mockReports, error: null })
     };
     return {
       select: () => chainObj,

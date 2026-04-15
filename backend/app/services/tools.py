@@ -6,19 +6,39 @@ from langchain_google_genai import ChatGoogleGenerativeAI
 
 @tool
 def keyword_scanner(message: str) -> str:
-    """Scans the message text for Indian scam keywords. Returns a string with risk_level and matched_keywords."""
-    keywords = ['upi', 'otp', 'kyc', 'lottery', 'prize', 'urgent', 'winner', 'suspended', 'pan', 'aadhar', 'bank']
+    """Scans the message text for Indian scam keywords using a weighted heuristic algorithm. Returns a string with risk_level and matched_keywords."""
     message_lower = message.lower()
-    matches = [kw for kw in keywords if kw in message_lower]
     
+    # Weighted Indian Scam Dictionary
+    high_risk = ['upi', 'otp', 'kyc', 'pan', 'aadhar', 'password', 'cvv']
+    med_risk = ['lottery', 'prize', 'urgent', 'suspended', 'winner', 'blocked', 'kbc', 'jio']
+    low_risk = ['click', 'link', 'offer', 'job', 'salary', 'earn', 'paise', 'bhejo', 'jeet']
+    
+    score = 0
+    matches = []
+    
+    for kw in high_risk:
+        if kw in message_lower:
+            score += 3
+            matches.append(kw)
+    for kw in med_risk:
+        if kw in message_lower:
+            score += 2
+            matches.append(kw)
+    for kw in low_risk:
+        if kw in message_lower:
+            score += 1
+            matches.append(kw)
+            
     risk_level = "low"
-    if len(matches) > 2:
+    if score >= 5:
         risk_level = "high"
-    elif len(matches) > 0:
+    elif score >= 2:
         risk_level = "medium"
         
     return json.dumps({
         "risk_level": risk_level,
+        "score": score,
         "matched_keywords": matches
     })
 
@@ -28,12 +48,20 @@ def gemini_deep_analyzer(message: str) -> str:
        Returns JSON string containing is_scam (bool), scam_type (str), confidence (float), and explanation (str).
     """
     try:
-        llm = ChatGoogleGenerativeAI(model="gemini-1.5-flash", temperature=0, google_api_key=os.getenv("GEMINI_API_KEY"))
-        prompt = f"""Analyze this message for cyber fraud. Is it a scam? Return ONLY valid JSON: {{"is_scam": bool, "scam_type": "string", "confidence": float, "explanation": "string"}} \nMessage: {message}"""
+        llm = ChatGoogleGenerativeAI(model="gemini-1.5-flash", temperature=0.0, google_api_key=os.getenv("GEMINI_API_KEY"))
+        
+        prompt = f"""You are an elite Cyber Threat Analyst. Your job is to dissect the semantic intent of the provided text.
+Identify if it employs Social Engineering, Authority Impersonation, urgency triggers, or malicious payloads.
+Return ONLY valid JSON matching this schema exactly: {{"is_scam": bool, "scam_type": "string", "confidence": float, "explanation": "string"}}
+
+Examples of Scams:
+"Your SBI Account is SUSPENDED. Click link to update PAN" -> Social Engineering (Bank)
+"Earn rs 5000 daily from home just by liking youtube videos" -> Task Fraud
+
+Message to Analyze: {message}"""
         
         res = llm.invoke(prompt)
         content = res.content.replace('```json', '').replace('```', '').strip()
-        # Ensure it's valid json before resolving tool step
         json.loads(content) 
         return content
     except Exception as e:
@@ -95,17 +123,21 @@ def send_alert(alert_params_json: str) -> str:
 
 @tool
 def generate_guidance(scam_type: str) -> str:
-    """Generates specific step-by-step safety guidance for a given scam type.
+    """Generates specific step-by-step safety guidance mapped tightly to modern scam vectors.
        Returns JSON {guidance: str, steps: list, report_url: str}
     """
     scam = scam_type.lower()
-    if 'upi' in scam:
-        return json.dumps({"guidance": "Never enter your UPI pin to receive money.", "steps": ["Block sender", "Report to bank"], "report_url": "cybercrime.gov.in"})
+    if 'upi' in scam or 'bank' in scam or 'phishing' in scam:
+        return json.dumps({"guidance": "Never enter your UPI pin or password. Financial institutions will never send unverified links.", "steps": ["Block sender instantly", "Contact your bank's official toll-free number", "Do not open any attached links"], "report_url": "cybercrime.gov.in"})
     elif 'otp' in scam:
-        return json.dumps({"guidance": "Your OTP is strictly confidential.", "steps": ["Do not share OTP", "Change password"], "report_url": "cybercrime.gov.in"})
+        return json.dumps({"guidance": "Your OTP is the final key to your account. Do not share it.", "steps": ["Do not share OTP", "Change related account password"], "report_url": "cybercrime.gov.in"})
     elif 'kyc' in scam:
-         return json.dumps({"guidance": "Banks never ask for KYC via informal links.", "steps": ["Visit bank branch", "Ignore link"], "report_url": "cybercrime.gov.in"})
-    elif 'none' in scam or 'safe' in scam:
-         return json.dumps({"guidance": "Message appears safe.", "steps": ["Normal caution"], "report_url": ""})
+         return json.dumps({"guidance": "KYC updates are never conducted via random SMS links.", "steps": ["Visit your home bank branch", "Ignore the link", "Delete the message"], "report_url": "cybercrime.gov.in"})
+    elif 'job' in scam or 'task' in scam or 'youtube' in scam:
+         return json.dumps({"guidance": "This is a classic 'Task Fraud'. Scammers will pay you small amounts initially to hook you, then steal thousands.", "steps": ["Do not pay any 'registration' fees", "Block the WhatsApp/Telegram number"], "report_url": "cybercrime.gov.in"})
+    elif 'lottery' in scam or 'kbc' in scam:
+         return json.dumps({"guidance": "You cannot win a lottery you didn't enter. This is an advance-fee fraud.", "steps": ["Do not pay any 'tax' or 'processing fee'", "Report the number"], "report_url": "cybercrime.gov.in"})
+    elif 'safe' in scam or 'none' in scam:
+         return json.dumps({"guidance": "Message appears structurally safe.", "steps": ["Exercise normal caution"], "report_url": ""})
     else:
-        return json.dumps({"guidance": "Exercise high caution.", "steps": ["Do not click links", "Do not reply"], "report_url": "cybercrime.gov.in"})
+        return json.dumps({"guidance": "Exercise extreme caution. This message exhibits strong hallmarks of social engineering.", "steps": ["Do not click links", "Do not reply", "Verify the sender independently"], "report_url": "cybercrime.gov.in"})
