@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { motion } from 'framer-motion';
 import ResultBadge from '../components/ResultBadge';
+import ComplaintPack from '../components/ComplaintPack';
 import { useScamDetect } from '../hooks/useScamDetect';
 import { useToast } from '../contexts/ToastContext';
 
@@ -12,8 +13,11 @@ const exampleMessages = [
 
 export default function ScanMessage() {
   const [message, setMessage] = useState('');
+  const [isComplaintPackOpen, setIsComplaintPackOpen] = useState(false);
   const { detectMessage, result, loading, error } = useScamDetect();
   const { addToast } = useToast();
+
+  const isHighRisk = result && (result.is_scam === true || (result.confidence || 0) >= 0.6 || (result.confidence_score || 0) >= 0.6);
 
   const handleScan = async (e) => {
     e.preventDefault();
@@ -102,6 +106,37 @@ export default function ScanMessage() {
         <div className="lg:col-span-2">
           {result ? (
             <div className="space-y-6">
+              {/* High-risk Scam Alert Banner */}
+              {isHighRisk && (
+                <div className="p-4 bg-red-950/70 border-2 border-red-500/80 rounded-xl shadow-xl shadow-red-950/40 text-red-100 flex flex-col sm:flex-row sm:items-center justify-between gap-3 animate-fade-in-up">
+                  <div className="flex items-start gap-3">
+                    <span className="p-2 bg-red-500/20 text-red-400 rounded-lg shrink-0 mt-0.5 sm:mt-0">
+                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                      </svg>
+                    </span>
+                    <div>
+                      <p className="text-sm font-bold text-white leading-snug">
+                        High-risk scam detected. If money was lost, call <a href="tel:1930" className="underline text-red-300 hover:text-white">1930</a> now.
+                      </p>
+                      <p className="text-xs text-red-300/80 mt-0.5">
+                        Prepare your evidence pack for cybercrime.gov.in
+                      </p>
+                    </div>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setIsComplaintPackOpen(true)}
+                    className="px-4 py-2.5 bg-red-600 hover:bg-red-500 text-white text-xs sm:text-sm font-bold rounded-lg shadow transition flex items-center justify-center gap-1.5 shrink-0 transform hover:scale-[1.02]"
+                  >
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                    </svg>
+                    Prepare Cyber Cell Complaint
+                  </button>
+                </div>
+              )}
+
               <ResultBadge result={result} />
               
               {/* Agent Actions Timeline */}
@@ -155,6 +190,14 @@ export default function ScanMessage() {
         </div>
 
       </div>
+
+      {/* Cyber Cell Complaint Pack Modal */}
+      <ComplaintPack
+        isOpen={isComplaintPackOpen}
+        onClose={() => setIsComplaintPackOpen(false)}
+        scanResult={result}
+        scannedMessage={message}
+      />
     </div>
   );
 }

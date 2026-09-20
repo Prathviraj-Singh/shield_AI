@@ -8,8 +8,8 @@
 :root{
   /* Dark palette matching the app (bg-gray-900, gray-800, etc.) */
   --bg:#111827; --panel:#1F2937; --ink:#F3F4F6; --muted:#9CA3AF; --line:#374151;
-  --accent:#3B82F6; --hi:#EF4444; --med:#F59E0B; --low:#9CA3AF; --vic:#3B82F6; --ok:#34D399;
-  --graph-bg:#1a2436;
+  --accent:#3B82F6; --hi:#EF4444; --med:#F59E0B; --low:#94A3B8; --vic:#38BDF8; --ok:#10B981;
+  --graph-bg:#0B0F19;
   --mono:ui-monospace,SFMono-Regular,Consolas,Menlo,monospace;
   --sans:Inter,system-ui,-apple-system,Roboto,"Helvetica Neue",Arial,sans-serif;
 }
@@ -128,17 +128,19 @@ details[open] .howto summary::before{content:'▾'}
 .howto ul li{margin-bottom:3px}
 
 /* Graph */
-.graphwrap{position:relative;border:1px solid var(--line);border-radius:6px;background:var(--graph-bg);overflow:hidden}
-#graph{display:block;width:100%;height:auto;min-height:340px}
+.graphwrap{position:relative;border:1px solid #374151;border-radius:8px;background:var(--graph-bg);box-shadow:inset 0 2px 12px rgba(0,0,0,0.6);overflow:hidden}
+#graph{display:block;width:100%;height:auto;min-height:360px}
 .graphbar{display:flex;gap:16px;flex-wrap:wrap;align-items:center;justify-content:space-between;margin-bottom:10px}
-.graphbar label{font-size:13px;margin-right:12px;white-space:nowrap;color:var(--ink)}
-.legend{display:flex;gap:14px;flex-wrap:wrap;font-size:12px;color:var(--muted);margin-top:10px}
-.legend i{display:inline-block;width:11px;height:11px;border-radius:50%;margin-right:5px;vertical-align:-1px}
-.node{cursor:pointer}
-.node:focus-visible .shape,.node.sel .shape{stroke:#E2E8F0;stroke-width:3}
-/* Labels: white text with dark halo so readable on dark graph */
-.lbl{font:10.5px var(--sans);fill:#F3F4F6;paint-order:stroke;stroke:#1a2436;stroke-width:3.5px;stroke-linejoin:round;pointer-events:none}
-.amt{font:600 10.5px var(--sans);fill:#FDE68A;paint-order:stroke;stroke:#1a2436;stroke-width:4px;stroke-linejoin:round}
+.graphbar label{font-size:13px;margin-right:12px;white-space:nowrap;color:var(--ink);cursor:pointer}
+.legend{display:flex;gap:12px;flex-wrap:wrap;align-items:center;font-size:12px;color:#E2E8F0;margin-top:12px;padding:8px 12px;background:#162032;border-radius:6px;border:1px solid #283548}
+.legend span{display:inline-flex;align-items:center;gap:6px}
+.legend i{display:inline-block;width:11px;height:11px;border-radius:50%;vertical-align:middle}
+.node{cursor:pointer;transition:transform .15s ease}
+.node:hover{filter:drop-shadow(0 0 8px rgba(96,165,250,0.7))}
+.node:focus-visible .shape,.node.sel .shape{stroke:#FFFFFF !important;stroke-width:3.5px !important;filter:drop-shadow(0 0 8px rgba(255,255,255,0.9))}
+/* Labels: clear high-contrast text on dark background */
+.lbl{font:600 11px var(--sans);fill:#F8FAFC;paint-order:stroke;stroke:#0B0F19;stroke-width:3.5px;stroke-linejoin:round;pointer-events:none;letter-spacing:.2px}
+.amt{font:700 11.5px var(--sans);fill:#34D399;paint-order:stroke;stroke:#0B0F19;stroke-width:4px;stroke-linejoin:round}
 
 .detail{border-top:1px solid var(--line);margin-top:12px;padding-top:12px}
 .detail h3{margin:0 0 4px;color:var(--ink);font-size:14px}
@@ -241,8 +243,8 @@ tbody tr:hover{background:#2D3748}
         <div class="howto">
           <summary>How to read this page</summary>
           <ul>
-            <li><strong>Arrows = money direction.</strong> Solid arrows show fund transfers; the amount is printed on the arrow. Thicker arrow = more money.</li>
-            <li><strong>Colours:</strong> <span style="color:#3B82F6">Blue</span> = victim, <span style="color:#EF4444">Red</span> = high risk (score 60+), <span style="color:#F59E0B">Amber</span> = medium risk (30&ndash;59), <span style="color:#9CA3AF">Grey</span> = low risk.</li>
+            <li><strong>Arrows = money direction.</strong> <span style="color:#10B981">Solid green arrows</span> show fund transfers; the amount is printed on the arrow. Thicker arrow = more money.</li>
+            <li><strong>Colours:</strong> <span style="color:#38BDF8">Sky Blue</span> = victim, <span style="color:#EF4444">Red</span> = high risk (score 60+), <span style="color:#F59E0B">Amber</span> = medium risk (30&ndash;59), <span style="color:#94A3B8">Slate grey</span> = low risk.</li>
             <li><strong>Click any node</strong> to see exactly why it got its risk score.</li>
             <li><strong>"Prime suspects"</strong> and <strong>"Immediate action"</strong> in the brief below are the outputs an investigating officer acts on.</li>
           </ul>
@@ -587,8 +589,8 @@ const $ = id => document.getElementById(id);
 const esc = s => String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const enc = new TextEncoder();
 const state = { files:[], result:null, report:null, selected:null, custody:[], layout:null };
-/* Dark-theme risk colours matching the app palette */
-const COLORS = { high:'#EF4444', medium:'#F59E0B', low:'#9CA3AF', victim:'#3B82F6' };
+/* Vivid risk colours easily visible against the website dark theme */
+const COLORS = { high:'#EF4444', medium:'#F59E0B', low:'#94A3B8', victim:'#38BDF8' };
 
 async function sha256Hex(buf){
   if(!(window.crypto && crypto.subtle)) return 'unavailable: open over https or localhost';
@@ -727,13 +729,16 @@ function computeLayout(res, W, H){
 }
 
 function shapeSvg(n, sel){
-  const c = COLORS[n.band]; const st=`class="shape" fill="${c}" stroke="#1a2436" stroke-width="2"`;
-  if(n.type==='phone') return `<circle ${st} r="10"/>`;
-  if(n.type==='account') return `<rect ${st} x="-13" y="-9" width="26" height="18" rx="4"/>`;
-  if(n.type==='cashout') return `<rect ${st} x="-12" y="-12" width="24" height="24" rx="2" transform="rotate(45)"/>`;
-  /* Device/subnet nodes: light fill with visible border on dark background */
-  if(n.type==='device') return `<polygon class="shape" fill="#CBD5E1" stroke="#64748B" stroke-width="2" points="0,-11 11,0 0,11 -11,0"/>`;
-  return `<polygon class="shape" fill="#CBD5E1" stroke="#64748B" stroke-width="2" points="-6,-10 6,-10 12,0 6,10 -6,10 -12,0"/>`;
+  const c = COLORS[n.band] || '#94A3B8';
+  const strokeCol = n.victim ? '#FFFFFF' : '#0B0F19';
+  const strokeW = n.victim ? '2.5' : '2';
+  const st = `class="shape" fill="${c}" stroke="${strokeCol}" stroke-width="${strokeW}"`;
+  if(n.type==='phone') return `<circle ${st} r="11"/>`;
+  if(n.type==='account') return `<rect ${st} x="-14" y="-10" width="28" height="20" rx="4"/>`;
+  if(n.type==='cashout') return `<rect class="shape" fill="${c}" stroke="#FDE68A" stroke-width="2.5" x="-13" y="-13" width="26" height="26" rx="3" transform="rotate(45)"/>`;
+  /* Device/subnet nodes: vivid purple and teal with visible outline on dark background */
+  if(n.type==='device') return `<polygon class="shape" fill="#C084FC" stroke="#FFFFFF" stroke-width="1.5" points="0,-12 12,0 0,12 -12,0"/>`;
+  return `<polygon class="shape" fill="#2DD4BF" stroke="#FFFFFF" stroke-width="1.5" points="-7,-11 7,-11 13,0 7,11 -7,11 -13,0"/>`;
 }
 
 function renderGraph(){
@@ -742,46 +747,58 @@ function renderGraph(){
   const showCalls=$('tgCalls').checked, showLinks=$('tgLinks').checked;
   const byId=new Map(res.nodes.map(n=>[n.id,n]));
   const hidden=n=> !showLinks && (n.type==='device'||n.type==='subnet');
-  /* Arrows: white-ish money arrow, teal call arrow — visible on dark graph background */
+  /* SVG defs: Grid pattern, glowing arrow markers with vivid contrasting colors */
   let svg = `<defs>
-    <marker id="arM" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#E2E8F0"/></marker>
+    <pattern id="graphGrid" width="40" height="40" patternUnits="userSpaceOnUse">
+      <path d="M 40 0 L 0 0 0 40" fill="none" stroke="#1E293B" stroke-width="0.8" stroke-opacity="0.5"/>
+    </pattern>
+    <marker id="arM" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#10B981"/></marker>
     <marker id="arC" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#38BDF8"/></marker>
-  </defs>`;
+    <marker id="arCSpoof" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#F43F5E"/></marker>
+  </defs>
+  <rect width="100%" height="100%" fill="url(#graphGrid)" />`;
   const trim=(a,b,r)=>{ const dx=b.x-a.x, dy=b.y-a.y, d=Math.sqrt(dx*dx+dy*dy)||1; return {x1:a.x+dx/d*r,y1:a.y+dy/d*r,x2:b.x-dx/d*r,y2:b.y-dy/d*r,mx:(a.x+b.x)/2,my:(a.y+b.y)/2}; };
   res.edges.forEach(e=>{
     const a=byId.get(e.from), b=byId.get(e.to); if(!a||!b||hidden(a)||hidden(b)) return;
     if(e.kind==='call' && !showCalls) return;
     if((e.kind==='uses'||e.kind==='subnet') && !showLinks) return;
-    const t=trim(a,b,e.kind==='money'||e.kind==='call'?17:12);
+    const t=trim(a,b,e.kind==='money'||e.kind==='call'?18:13);
     if(e.kind==='money'){
-      const w=Math.min(5,1.5+Math.log10(e.amt)/2);
-      /* Light-grey money arrows, readable on dark graph */
-      svg+=`<line x1="${t.x1}" y1="${t.y1}" x2="${t.x2}" y2="${t.y2}" stroke="#E2E8F0" stroke-width="${w}" marker-end="url(#arM)"/>`;
+      const w=Math.min(5.5, 2 + Math.log10(e.amt)/1.8);
+      /* Vibrant Emerald Green money arrows, clearly visible against dark theme */
+      svg+=`<line x1="${t.x1}" y1="${t.y1}" x2="${t.x2}" y2="${t.y2}" stroke="#10B981" stroke-width="${w}" marker-end="url(#arM)"/>`;
     } else if(e.kind==='call'){
-      svg+=`<line x1="${t.x1}" y1="${t.y1}" x2="${t.x2}" y2="${t.y2}" stroke="#38BDF8" stroke-width="${e.spoof?2:1.3}" stroke-dasharray="${e.spoof?'7 3':'3 3'}" marker-end="url(#arC)"/>`;
+      const strokeCol = e.spoof ? '#F43F5E' : '#38BDF8';
+      const markerId = e.spoof ? 'arCSpoof' : 'arC';
+      svg+=`<line x1="${t.x1}" y1="${t.y1}" x2="${t.x2}" y2="${t.y2}" stroke="${strokeCol}" stroke-width="${e.spoof?2.2:1.5}" stroke-dasharray="${e.spoof?'7 3':'3 3'}" marker-end="url(#${markerId})"/>`;
     } else {
-      svg+=`<line x1="${t.x1}" y1="${t.y1}" x2="${t.x2}" y2="${t.y2}" stroke="#4B5563" stroke-width="1.2" stroke-dasharray="1.5 3.5"/>`;
+      /* Shared device/network link: light violet dashed line */
+      svg+=`<line x1="${t.x1}" y1="${t.y1}" x2="${t.x2}" y2="${t.y2}" stroke="#A78BFA" stroke-width="1.5" stroke-dasharray="3 4"/>`;
     }
   });
   res.edges.filter(e=>e.kind==='money').forEach(e=>{
     const a=byId.get(e.from), b=byId.get(e.to); if(!a||!b) return;
-    svg+=`<text class="amt" x="${(a.x+b.x)/2}" y="${(a.y+b.y)/2-5}" text-anchor="middle">${inr(e.amt)}</text>`;
+    svg+=`<text class="amt" x="${(a.x+b.x)/2}" y="${(a.y+b.y)/2-6}" text-anchor="middle">${inr(e.amt)}</text>`;
   });
   res.nodes.forEach(n=>{
     if(hidden(n)) return;
     const sel = n.id===state.selected ? ' sel':'';
     const lbl = n.type==='account'||n.type==='cashout' ? n.label : n.label;
     svg+=`<g class="node${sel}" data-id="${esc(n.id)}" tabindex="0" role="button" aria-label="${esc(n.label)}, ${n.victim?'victim':'risk '+n.score}" transform="translate(${n.x.toFixed(1)},${n.y.toFixed(1)})">
-      ${shapeSvg(n)}<text class="lbl" y="${n.type==='cashout'?26:24}" text-anchor="middle">${esc(lbl)}</text></g>`;
+      ${shapeSvg(n)}<text class="lbl" y="${n.type==='cashout'?27:25}" text-anchor="middle">${esc(lbl)}</text></g>`;
   });
   $('graph').innerHTML = svg;
   $('legend').innerHTML = `
-    <span><i style="background:${COLORS.victim}"></i>Victim</span>
-    <span><i style="background:${COLORS.high}"></i>High risk 60+</span>
-    <span><i style="background:${COLORS.medium}"></i>Medium 30-59</span>
+    <span><i style="background:${COLORS.victim};box-shadow:0 0 6px ${COLORS.victim}"></i>Victim</span>
+    <span><i style="background:${COLORS.high};box-shadow:0 0 6px ${COLORS.high}"></i>High risk 60+</span>
+    <span><i style="background:${COLORS.medium};box-shadow:0 0 6px ${COLORS.medium}"></i>Medium 30-59</span>
     <span><i style="background:${COLORS.low}"></i>Low</span>
-    <span>Circle: phone. Rounded box: account/UPI. Diamond: <abbr title="Where funds leave the banking network: ATM, crypto or wallet cash-out">cash-out</abbr>. Open diamond: shared <abbr title="International Mobile Equipment Identity — the handset">IMEI</abbr>. Hexagon: shared <abbr title="/24 block of ~256 nearby IP addresses">/24</abbr> net.</span>
-    <span>Solid arrow: money flow (thicker = more). Dashed teal: call (long dash = spoofed). Dotted grey: shared device/network.</span>`;
+    <span><i style="background:#C084FC"></i>Shared IMEI handset</span>
+    <span><i style="background:#2DD4BF"></i>Shared /24 subnet</span>
+    <span><strong style="color:#10B981;font-size:13px">―►</strong> Money flow</span>
+    <span><strong style="color:#38BDF8;font-size:13px">╌►</strong> Call</span>
+    <span><strong style="color:#F43F5E;font-size:13px">╌►</strong> Spoofed call</span>
+    <span><strong style="color:#A78BFA;font-size:13px">···</strong> Device/network link</span>`;
 }
 
 function renderDetail(){
