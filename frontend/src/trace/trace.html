@@ -1,0 +1,879 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ShieldAI Trace: cyber fraud evidence correlator</title>
+<style>
+:root{
+  /* Dark palette matching the app (bg-gray-900, gray-800, etc.) */
+  --bg:#111827; --panel:#1F2937; --ink:#F3F4F6; --muted:#9CA3AF; --line:#374151;
+  --accent:#3B82F6; --hi:#EF4444; --med:#F59E0B; --low:#9CA3AF; --vic:#3B82F6; --ok:#34D399;
+  --graph-bg:#1a2436;
+  --mono:ui-monospace,SFMono-Regular,Consolas,Menlo,monospace;
+  --sans:Inter,system-ui,-apple-system,Roboto,"Helvetica Neue",Arial,sans-serif;
+}
+*{box-sizing:border-box}
+html,body{margin:0;height:100%}
+body{background:var(--bg);color:var(--ink);font:14px/1.5 var(--sans);overflow-x:hidden}
+h1,h2,h3,p{margin:0}
+button{font:inherit;cursor:pointer}
+button:focus-visible,label:focus-within,a:focus-visible,tr:focus-visible{outline:3px solid #60A5FA;outline-offset:2px}
+
+/* Slim title bar replaces the big dark header (app navbar is above) */
+.top{
+  background:#0F172A;
+  color:var(--ink);
+  padding:8px 20px;
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  gap:12px;
+  flex-wrap:wrap;
+  border-bottom:1px solid var(--line);
+}
+.top h1{font-size:14px;font-weight:600;letter-spacing:.2px;color:#E2E8F0}
+.badge{font:11px var(--mono);border:1px solid #374151;border-radius:4px;padding:3px 7px;color:#9CA3AF}
+
+.layout{display:grid;grid-template-columns:320px minmax(0,1fr);gap:14px;padding:12px 18px 40px;max-width:1500px;margin:0 auto}
+@media (max-width:980px){.layout{grid-template-columns:1fr;padding:10px}}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:6px;padding:14px;margin-bottom:14px}
+.card h2{font-size:15px;margin-bottom:10px;color:var(--ink)}
+.card h3{font-size:12px;margin:14px 0 5px;color:var(--muted);font-weight:600;text-transform:uppercase;letter-spacing:.4px}
+.muted{color:var(--muted)}
+.small{font-size:12px}
+
+/* Drop zone */
+.drop{
+  display:block;
+  border:2px dashed #374151;
+  border-radius:6px;
+  padding:16px 12px;
+  text-align:center;
+  cursor:pointer;
+  background:#161D2A;
+  color:var(--muted);
+}
+.drop.over{background:#1E3A5F;border-color:var(--accent)}
+.drop u{color:var(--accent)}
+
+.row{display:flex;gap:8px;flex-wrap:wrap;margin:10px 0}
+button{
+  border:1px solid #374151;
+  background:#1F2937;
+  border-radius:5px;
+  padding:7px 12px;
+  color:var(--ink);
+}
+button:hover{background:#2D3748}
+button.primary{background:var(--accent);border-color:var(--accent);color:#fff}
+button.primary:hover{background:#2563EB}
+
+/* Evidence list */
+.evlist{list-style:none;margin:0;padding:0}
+.evlist li{border:1px solid var(--line);border-radius:5px;padding:8px 10px;margin-bottom:8px;background:#161D2A}
+.evlist .nm{font-weight:600;word-break:break-all;color:var(--ink)}
+.evlist .meta{font-size:12px;color:var(--muted)}
+.hash{font:11px/1.4 var(--mono);word-break:break-all;color:#94A3B8;margin-top:4px}
+.ver{font-size:12px;padding:2px 8px;margin-top:6px;background:#1F2937;border-color:#374151;color:var(--ink)}
+.okmark{color:var(--ok);font-weight:600}
+.custody{margin:0;padding-left:18px;font:11px/1.5 var(--mono);color:#6B7280}
+.custody li{margin-bottom:3px;word-break:break-word}
+.warn{background:#422006;border:1px solid #92400E;border-radius:5px;padding:8px 10px;font-size:12px;margin-top:8px;color:#FDE68A}
+
+/* Stat strip */
+.stats{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;margin-bottom:14px}
+@media (max-width:760px){.stats{grid-template-columns:repeat(2,minmax(0,1fr))}}
+.stat{background:var(--panel);border:1px solid var(--line);border-radius:6px;padding:10px 12px}
+.stat b{display:block;font-size:20px;line-height:1.2;color:var(--ink)}
+.stat span{font-size:11px;color:var(--muted)}
+.stat.hi b{color:var(--hi)}
+
+/* Plain-language summary */
+#plainSummary{
+  background:#162032;
+  border:1px solid #1D4ED8;
+  border-radius:6px;
+  padding:10px 14px;
+  margin-bottom:14px;
+  font-size:13px;
+  color:#BFDBFE;
+  line-height:1.6;
+}
+
+/* How-to card */
+.howto{
+  background:#1a2436;
+  border:1px solid var(--line);
+  border-radius:6px;
+  margin-bottom:14px;
+  overflow:hidden;
+}
+.howto summary{
+  padding:9px 14px;
+  font-size:13px;
+  font-weight:600;
+  color:#93C5FD;
+  cursor:pointer;
+  list-style:none;
+  display:flex;
+  align-items:center;
+  gap:6px;
+  user-select:none;
+}
+.howto summary::-webkit-details-marker{display:none}
+.howto summary::before{content:'▸';font-size:11px;transition:transform .2s}
+details[open] .howto summary::before{content:'▾'}
+.howto ul{margin:0;padding:8px 14px 12px 28px;font-size:12px;color:var(--muted);line-height:1.7}
+.howto ul li{margin-bottom:3px}
+
+/* Graph */
+.graphwrap{position:relative;border:1px solid var(--line);border-radius:6px;background:var(--graph-bg);overflow:hidden}
+#graph{display:block;width:100%;height:auto;min-height:340px}
+.graphbar{display:flex;gap:16px;flex-wrap:wrap;align-items:center;justify-content:space-between;margin-bottom:10px}
+.graphbar label{font-size:13px;margin-right:12px;white-space:nowrap;color:var(--ink)}
+.legend{display:flex;gap:14px;flex-wrap:wrap;font-size:12px;color:var(--muted);margin-top:10px}
+.legend i{display:inline-block;width:11px;height:11px;border-radius:50%;margin-right:5px;vertical-align:-1px}
+.node{cursor:pointer}
+.node:focus-visible .shape,.node.sel .shape{stroke:#E2E8F0;stroke-width:3}
+/* Labels: white text with dark halo so readable on dark graph */
+.lbl{font:10.5px var(--sans);fill:#F3F4F6;paint-order:stroke;stroke:#1a2436;stroke-width:3.5px;stroke-linejoin:round;pointer-events:none}
+.amt{font:600 10.5px var(--sans);fill:#FDE68A;paint-order:stroke;stroke:#1a2436;stroke-width:4px;stroke-linejoin:round}
+
+.detail{border-top:1px solid var(--line);margin-top:12px;padding-top:12px}
+.detail h3{margin:0 0 4px;color:var(--ink);font-size:14px}
+.pill{display:inline-block;font-size:12px;font-weight:600;border-radius:999px;padding:1px 9px;color:#fff;margin-left:6px;vertical-align:1px}
+.pill.high{background:var(--hi)} .pill.medium{background:var(--med)} .pill.low{background:var(--low)} .pill.victim{background:var(--vic)}
+.reasons{margin:6px 0 0;padding-left:18px}
+.reasons li{margin-bottom:2px;color:var(--ink)}
+
+table{border-collapse:collapse;width:100%}
+th,td{text-align:left;padding:7px 8px;border-bottom:1px solid var(--line);vertical-align:top;color:var(--ink)}
+th{font-size:12px;color:var(--muted);font-weight:600}
+tbody tr{cursor:pointer}
+tbody tr:hover{background:#2D3748}
+.tablewrap{overflow-x:auto}
+.bar{display:inline-block;height:8px;border-radius:2px;vertical-align:middle;margin-right:6px}
+.mono{font-family:var(--mono);font-size:12px}
+
+.corr{border:1px solid var(--line);border-radius:5px;padding:10px 12px;margin-bottom:8px;background:#161D2A}
+.corr .k{font-weight:600;color:var(--ink)}
+.conf{font-size:12px;font-weight:600;margin-left:6px}
+.conf.High{color:var(--ok)} .conf.Medium{color:var(--med)}
+
+/* Brief — keep white background for printing */
+#brief{background:#fff;color:#111;border:1px solid var(--line);border-radius:6px;padding:20px 24px}
+#brief h2{font-size:17px;color:#111}
+#brief h3{font-size:12.5px;margin:14px 0 4px;color:#111;border-bottom:1px solid #D1D5DB;padding-bottom:2px}
+#brief ul,#brief ol{margin:4px 0;padding-left:18px}
+#brief li{margin-bottom:2px;color:#111}
+#brief .hd{display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap}
+#brief .hashline{font:10.5px var(--mono);word-break:break-all;color:#374151}
+#brief p{color:#111}
+.briefbar{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px}
+.empty{padding:20px}
+.empty h2{font-size:18px;color:var(--ink)}
+.empty ol{padding-left:20px;color:var(--ink)}
+.empty p{color:var(--ink)}
+.explain{background:#162032;border:1px solid #1E3A5F;border-radius:6px;padding:12px 16px;margin:14px 0;font-size:13px;color:#BFDBFE;line-height:1.7}
+.explain .gloss{margin-top:8px;font-size:11.5px;color:#93C5FD}
+.samples a{display:inline-block;margin-right:14px;font:13px var(--mono);color:var(--accent)}
+
+@media (max-width:680px){.layout{padding:8px} .stats{grid-template-columns:1fr 1fr}}
+@media (prefers-reduced-motion:no-preference){.drop{transition:background .15s,border-color .15s}}
+
+@page{margin:10mm}
+@media print{
+  body{background:#fff !important}
+  body *{visibility:hidden}
+  #brief,#brief *{visibility:visible}
+  #brief{position:absolute;left:0;top:0;width:100%;border:none;padding:0;font-size:10px;line-height:1.35;background:#fff !important;color:#000 !important}
+  #brief h2{font-size:14px} #brief h3{font-size:10.5px;margin:8px 0 3px}
+}
+</style>
+</head>
+<body>
+<header class="top">
+  <h1>ShieldAI Trace &mdash; Cyber Fraud Evidence Correlator</h1>
+  <div class="badge" id="hashState">SHA-256: checking</div>
+</header>
+
+<main class="layout">
+  <aside>
+    <section class="card" aria-labelledby="evh">
+      <h2 id="evh">Evidence</h2>
+      <label class="drop" id="drop">
+        <input type="file" id="file" multiple accept=".csv,text/csv" hidden>
+        Drop CDR, IPDR and bank/UPI CSV files here, or <u>choose files</u>
+      </label>
+      <div class="row">
+        <button class="primary" id="btnSample" type="button">Load sample case</button>
+        <button id="btnClear" type="button">Clear</button>
+      </div>
+      <div id="warnings"></div>
+      <ul class="evlist" id="evList"></ul>
+      <h3>Chain of custody log</h3>
+      <ol class="custody" id="custody"><li class="muted">No evidence loaded.</li></ol>
+    </section>
+  </aside>
+
+  <section>
+    <div class="card empty" id="empty">
+      <h2>Load a case to start</h2>
+      <div class="explain">
+        <strong>What is this?</strong> Police receive cyber-fraud complaints together with phone-call records (<abbr title="Call Detail Records: a log of every phone call with caller, receiver, time, duration and phone/SIM identifiers">CDR</abbr>), internet session logs (<abbr title="Internet Protocol Detail Records: which phone number used which IP address at what time">IPDR</abbr>) and bank/UPI settlement records. This tool links those files automatically and shows where the stolen money went &mdash; all inside this browser tab, nothing uploaded.
+        <div class="gloss"><abbr title="Call Detail Records">CDR</abbr> = call records &nbsp;·&nbsp; <abbr title="Internet Protocol Detail Records">IPDR</abbr> = internet session records &nbsp;·&nbsp; <abbr title="International Mobile Equipment Identity: identifies the physical handset">IMEI</abbr> = phone handset ID &nbsp;·&nbsp; <abbr title="International Mobile Subscriber Identity: identifies the SIM card">IMSI</abbr> = SIM card ID &nbsp;·&nbsp; UPI handle = payment ID (e.g. name@bank) &nbsp;·&nbsp; <abbr title="A /24 block covers 256 IP addresses sharing the same first three numbers, often a single ISP's local allocation">/24 network</abbr> = block of nearby internet addresses</div>
+      </div>
+      <ol style="margin:10px 0 10px;padding-left:20px">
+        <li>Load the sample case, or drop your own <abbr title="Call Detail Records">CDR</abbr>, <abbr title="Internet Protocol Detail Records">IPDR</abbr> and bank/UPI settlement CSVs.</li>
+        <li>Read the money-flow graph from victim to <abbr title="Where funds leave the banking network: ATM withdrawal, crypto exchange, or wallet cash-out">cash-out</abbr>.</li>
+        <li>Print the one-page brief or download it as JSON.</li>
+      </ol>
+      <p class="small muted" style="margin:14px 0 4px">Sample files (test the upload path):</p>
+      <div class="samples" id="sampleLinks"></div>
+      <p class="small muted" style="margin-top:12px">Expected columns &mdash; <abbr title="Call Detail Records">CDR</abbr>: caller, callee, timestamp, duration_sec, <abbr title="International Mobile Equipment Identity">imei</abbr>, <abbr title="International Mobile Subscriber Identity">imsi</abbr>, cli_type. Bank: txn_id, timestamp, from_upi, from_mobile, to_upi, to_mobile, amount, channel. <abbr title="Internet Protocol Detail Records">IPDR</abbr>: msisdn, timestamp, src_ip, <abbr title="International Mobile Equipment Identity">imei</abbr>.</p>
+    </div>
+
+    <div id="results" hidden>
+      <div id="plainSummary"></div>
+
+      <details open>
+        <div class="howto">
+          <summary>How to read this page</summary>
+          <ul>
+            <li><strong>Arrows = money direction.</strong> Solid arrows show fund transfers; the amount is printed on the arrow. Thicker arrow = more money.</li>
+            <li><strong>Colours:</strong> <span style="color:#3B82F6">Blue</span> = victim, <span style="color:#EF4444">Red</span> = high risk (score 60+), <span style="color:#F59E0B">Amber</span> = medium risk (30&ndash;59), <span style="color:#9CA3AF">Grey</span> = low risk.</li>
+            <li><strong>Click any node</strong> to see exactly why it got its risk score.</li>
+            <li><strong>"Prime suspects"</strong> and <strong>"Immediate action"</strong> in the brief below are the outputs an investigating officer acts on.</li>
+          </ul>
+        </div>
+      </details>
+
+      <div class="stats" id="stats"></div>
+
+      <div class="card">
+        <div class="graphbar">
+          <h2 style="margin:0">Where the money went</h2>
+          <div>
+            <label><input type="checkbox" id="tgCalls" checked> Calls</label>
+            <label><input type="checkbox" id="tgLinks" checked> Shared handset &amp; network links</label>
+          </div>
+        </div>
+        <div class="graphwrap"><svg id="graph" viewBox="0 0 1000 560" role="img" aria-label="Network graph of accounts, phone numbers and devices"></svg></div>
+        <div class="legend" id="legend"></div>
+        <div class="detail" id="detail"></div>
+      </div>
+
+      <div class="card">
+        <h2>Who to look at first</h2>
+        <div class="tablewrap"><table>
+          <thead><tr><th>Endpoint</th><th>Type</th><th>Risk</th><th>Main reasons</th></tr></thead>
+          <tbody id="ranked"></tbody>
+        </table></div>
+      </div>
+
+      <div class="card">
+        <h2>What connects these numbers and accounts</h2>
+        <div id="corr"></div>
+      </div>
+
+      <div class="briefbar">
+        <button class="primary" id="btnPrint" type="button">Print or save brief as PDF</button>
+        <button id="btnJson" type="button">Download brief as JSON</button>
+      </div>
+      <div id="brief"></div>
+    </div>
+  </section>
+</main>
+
+<script>
+//<ENGINE>
+const TOOL = {name:'ShieldAI Trace', version:'0.1-poc'};
+
+const SAMPLE = {
+cdr:`caller,callee,timestamp,duration_sec,imei,imsi,cli_type
+9811100001,9811100002,2026-09-18T11:05:00+05:30,120,351111000000001,404110000000001,NORMAL
+9811100002,9811100001,2026-09-18T11:40:00+05:30,60,351111000000002,404110000000002,NORMAL
+9000011111,9876500001,2026-09-18T14:02:00+05:30,312,356938035643809,404100000000001,VOIP_SPOOF
+9000022222,9876500001,2026-09-18T14:20:00+05:30,145,356938035643809,404100000000002,VOIP_SPOOF
+9000011111,8800100001,2026-09-18T14:39:00+05:30,60,356938035643809,404100000000001,NORMAL
+8800100001,8800100002,2026-09-18T14:45:00+05:30,40,863123040000111,404880000000001,NORMAL
+8800100001,8800100003,2026-09-18T14:48:00+05:30,35,863123040000111,404880000000001,NORMAL
+8800100003,9000022222,2026-09-18T14:57:00+05:30,50,863123040000333,404880000000003,NORMAL
+9000033333,9876500002,2026-09-18T15:02:00+05:30,200,356938035643809,404100000000003,VOIP_SPOOF
+9000033333,8800100001,2026-09-18T15:12:00+05:30,45,356938035643809,404100000000003,NORMAL
+8800100001,8800100003,2026-09-18T15:19:00+05:30,30,863123040000111,404880000000001,NORMAL
+`,
+bank:`txn_id,timestamp,from_upi,from_mobile,to_upi,to_mobile,amount,channel
+T1010,2026-09-18T11:32:00+05:30,priya@okaxis,9811100001,kirana@paytm,9811100002,1250,UPI
+T1001,2026-09-18T14:41:00+05:30,ramesh.verma@okicici,9876500001,mule.a@ybl,8800100001,250000,UPI
+T1002,2026-09-18T14:44:00+05:30,ramesh.verma@okicici,9876500001,mule.a@ybl,8800100001,230000,UPI
+T1003,2026-09-18T14:47:00+05:30,mule.a@ybl,8800100001,mule.b@paytm,8800100002,300000,UPI
+T1004,2026-09-18T14:49:00+05:30,mule.a@ybl,8800100001,mule.c@axl,8800100003,170000,UPI
+T1005,2026-09-18T14:52:00+05:30,mule.b@paytm,8800100002,CRYPTO-EXCH-19,,290000,CRYPTO_OFFRAMP
+T1006,2026-09-18T14:55:00+05:30,mule.c@axl,8800100003,ATM-BHOPAL-07,,165000,ATM_WITHDRAWAL
+T1007,2026-09-18T15:15:00+05:30,sunita.k@okhdfc,9876500002,mule.a@ybl,8800100001,95000,UPI
+T1008,2026-09-18T15:20:00+05:30,mule.a@ybl,8800100001,mule.c@axl,8800100003,90000,UPI
+T1009,2026-09-18T15:24:00+05:30,mule.c@axl,8800100003,ATM-BHOPAL-07,,90000,ATM_WITHDRAWAL
+`,
+ipdr:`msisdn,timestamp,src_ip,imei
+9811100001,2026-09-18T11:00:00+05:30,103.21.5.11,351111000000001
+9811100002,2026-09-18T11:30:00+05:30,49.36.119.5,351111000000002
+9876500001,2026-09-18T14:00:00+05:30,157.32.10.4,358240051111111
+9000011111,2026-09-18T14:01:00+05:30,49.36.118.20,356938035643809
+9000022222,2026-09-18T14:19:00+05:30,49.36.118.55,356938035643809
+8800100001,2026-09-18T14:38:00+05:30,49.36.118.77,863123040000111
+8800100003,2026-09-18T14:47:00+05:30,106.51.200.15,863123040000333
+8800100002,2026-09-18T14:50:00+05:30,49.36.118.140,356938035643809
+9876500002,2026-09-18T15:00:00+05:30,152.58.44.9,358240052222222
+9000033333,2026-09-18T15:01:00+05:30,49.36.118.90,356938035643809
+`};
+
+function parseCSV(text){
+  text = String(text).replace(/^\uFEFF/,'');
+  const rows=[]; let row=[], cur='', inQ=false;
+  for(let i=0;i<text.length;i++){
+    const c=text[i];
+    if(inQ){
+      if(c==='"'){ if(text[i+1]==='"'){cur+='"';i++;} else inQ=false; }
+      else cur+=c;
+    } else if(c==='"'){ inQ=true; }
+    else if(c===','){ row.push(cur); cur=''; }
+    else if(c==='\n'||c==='\r'){
+      if(c==='\r'&&text[i+1]==='\n') i++;
+      row.push(cur); cur='';
+      if(row.some(x=>x.trim()!=='')) rows.push(row);
+      row=[];
+    } else cur+=c;
+  }
+  if(cur!==''||row.length){ row.push(cur); if(row.some(x=>x.trim()!=='')) rows.push(row); }
+  if(!rows.length) return {headers:[],records:[]};
+  const headers=rows[0].map(h=>h.trim().toLowerCase());
+  const records=rows.slice(1).map(r=>{const o={}; headers.forEach((h,i)=>o[h]=(r[i]||'').trim()); return o;});
+  return {headers,records};
+}
+
+function detectType(h){
+  if(h.includes('caller')&&h.includes('callee')) return 'cdr';
+  if(h.includes('txn_id')&&h.includes('amount')) return 'bank';
+  if(h.includes('src_ip')&&h.includes('msisdn')) return 'ipdr';
+  return null;
+}
+
+const normPhone = s => { const d=String(s||'').replace(/\D/g,''); return d.length>=10 ? d.slice(-10) : d; };
+const normUpi   = s => String(s||'').trim().toLowerCase();
+const tsOf      = s => { const t=Date.parse(s); return isNaN(t) ? null : t; };
+const subnet24  = ip => { const m=/^(\d{1,3})\.(\d{1,3})\.(\d{1,3})\.\d{1,3}$/.exec(String(ip||'').trim()); return m ? `${m[1]}.${m[2]}.${m[3]}.0/24` : null; };
+const inr = n => '₹' + Math.round(Number(n)).toLocaleString('en-IN');
+const fmtT = t => new Date(t).toLocaleString('en-GB',{timeZone:'Asia/Kolkata',day:'2-digit',month:'short',hour:'2-digit',minute:'2-digit',hour12:false}) + ' IST';
+const band = s => s>=60 ? 'high' : s>=30 ? 'medium' : 'low';
+
+function analyze(data){
+  const warnings=[]; const cdr=[], bank=[], ipdr=[];
+  (data.cdr||[]).forEach((r,i)=>{
+    const a=normPhone(r.caller), b=normPhone(r.callee), t=tsOf(r.timestamp);
+    if(!a||!b||t===null){ warnings.push(`CDR row ${i+2} skipped: missing number or invalid timestamp.`); return; }
+    cdr.push({a,b,t,dur:Number(r.duration_sec)||0,imei:String(r.imei||'').replace(/\D/g,''),imsi:String(r.imsi||'').replace(/\D/g,''),cli:String(r.cli_type||'NORMAL').toUpperCase()});
+  });
+  (data.bank||[]).forEach((r,i)=>{
+    const from=normUpi(r.from_upi), to=normUpi(r.to_upi), t=tsOf(r.timestamp), amt=parseFloat(String(r.amount).replace(/,/g,''));
+    if(!from||!to||t===null||!(amt>0)){ warnings.push(`Bank row ${i+2} skipped: missing account, amount or valid timestamp.`); return; }
+    bank.push({id:r.txn_id||('row'+(i+2)),t,from,to,fm:normPhone(r.from_mobile),tm:normPhone(r.to_mobile),amt,ch:String(r.channel||'').toUpperCase()});
+  });
+  (data.ipdr||[]).forEach((r,i)=>{
+    const p=normPhone(r.msisdn), t=tsOf(r.timestamp);
+    if(!p||t===null){ warnings.push(`IPDR row ${i+2} skipped: missing number or invalid timestamp.`); return; }
+    ipdr.push({p,t,ip:r.src_ip,imei:String(r.imei||'').replace(/\D/g,'')});
+  });
+
+  const push=(m,k,v)=>{ if(!m.has(k)) m.set(k,[]); m.get(k).push(v); };
+  const addSet=(m,k,v)=>{ if(!m.has(k)) m.set(k,new Set()); m.get(k).add(v); };
+  const CASH=new Set(['ATM_WITHDRAWAL','CRYPTO_OFFRAMP','CASH_WITHDRAWAL','WALLET_CASHOUT']);
+
+  const inc=new Map(), out=new Map(), owner=new Map(), cashout=new Set();
+  bank.forEach(x=>{
+    push(out,x.from,x); push(inc,x.to,x);
+    if(x.fm) owner.set(x.from,x.fm);
+    if(x.tm) owner.set(x.to,x.tm);
+    if(CASH.has(x.ch) || !x.to.includes('@')) cashout.add(x.to);
+  });
+
+  const phones=new Set();
+  cdr.forEach(r=>{phones.add(r.a);phones.add(r.b);}); ipdr.forEach(r=>phones.add(r.p)); owner.forEach(p=>phones.add(p));
+
+  let imeiPhones=new Map(); const imeiImsi=new Map(); let subPhones=new Map();
+  cdr.forEach(r=>{ if(r.imei){ addSet(imeiPhones,r.imei,r.a); if(r.imsi) addSet(imeiImsi,r.imei,r.imsi); } });
+  ipdr.forEach(r=>{ if(r.imei) addSet(imeiPhones,r.imei,r.p); const s=subnet24(r.ip); if(s) addSet(subPhones,s,r.p); });
+
+  // Victims: money leaves, none arrives, and the owner's number received a spoofed or VoIP caller ID call.
+  const victims=new Set(), victimPhones=new Set();
+  out.forEach((_,a)=>{
+    if(inc.has(a)) return;
+    const p=owner.get(a);
+    if(p && cdr.some(r=>r.b===p && r.cli!=='NORMAL')){ victims.add(a); victimPhones.add(p); }
+  });
+
+  // Victim numbers never create device or network links (avoids false suspect links).
+  const dropVictims=m=>{ const r=new Map(); m.forEach((s,k)=>{ const f=new Set([...s].filter(p=>!victimPhones.has(p))); if(f.size) r.set(k,f); }); return r; };
+  imeiPhones=dropVictims(imeiPhones); subPhones=dropVictims(subPhones);
+  const phoneImeis=new Map(), phoneSubs=new Map();
+  imeiPhones.forEach((s,k)=>s.forEach(p=>addSet(phoneImeis,p,k)));
+  subPhones.forEach((s,k)=>s.forEach(p=>addSet(phoneSubs,p,k)));
+
+  const depth=new Map(); const q=[];
+  victims.forEach(v=>{depth.set(v,0);q.push(v);});
+  while(q.length){ const a=q.shift(); (out.get(a)||[]).forEach(x=>{ if(!depth.has(x.to)){depth.set(x.to,depth.get(a)+1);q.push(x.to);} }); }
+
+  const mk=()=>({score:0,reasons:[]});
+  const add=(o,pts,text)=>{ o.score+=pts; o.reasons.push({pts,text}); };
+  const sum=arr=>arr.reduce((s,x)=>s+x.amt,0);
+
+  // Account and cash-out scoring
+  const acctS=new Map();
+  const accounts=new Set([...inc.keys(),...out.keys()]);
+  accounts.forEach(a=>{
+    const s=mk(); acctS.set(a,s);
+    if(victims.has(a)) return;
+    const ins=inc.get(a)||[], outs=out.get(a)||[];
+    const totIn=sum(ins), totOut=sum(outs);
+    if(ins.some(x=>victims.has(x.from))) add(s,15,'Received money directly from a complaint victim');
+    if(cashout.has(a)){
+      add(s,50,'Terminal cash-out point: funds leave the account network here');
+    } else if(totIn>0 && outs.length){
+      const firstIn=Math.min(...ins.map(x=>x.t));
+      const later=outs.filter(x=>x.t>=firstIn);
+      if(later.length){
+        const firstOut=Math.min(...later.map(x=>x.t));
+        const gap=Math.round((firstOut-firstIn)/60000);
+        if(totOut>=0.8*totIn && gap<=15) add(s,40,`Pass-through: ${Math.round(100*totOut/totIn)}% of ${inr(totIn)} received was forwarded, first transfer ${gap} min after first credit`);
+      }
+    }
+    const benes=new Set(outs.map(x=>x.to));
+    if(benes.size>=2) add(s,10,`Splits funds across ${benes.size} accounts`);
+    if((depth.get(a)||0)>=2) add(s,20,`Multi-hop routing: ${depth.get(a)} hops from the victim`);
+    const senders=new Set(ins.map(x=>x.from));
+    if(senders.size>=2) add(s,15,`Received from ${senders.size} different senders`);
+  });
+
+  // Phone scoring
+  const spoofers=new Map(); // phone -> victims called with spoofed/VoIP caller ID
+  cdr.forEach(r=>{ if(r.cli!=='NORMAL' && victimPhones.has(r.b)) { if(!spoofers.has(r.a)) spoofers.set(r.a,new Set()); spoofers.get(r.a).add(r.b); } });
+  const firstOutOf=new Map(); // victim phone -> earliest outgoing transfer time
+  victims.forEach(v=>{ const p=owner.get(v); const t=Math.min(...(out.get(v)||[]).map(x=>x.t)); if(p&&isFinite(t)) firstOutOf.set(p,t); });
+  const phoneS=new Map();
+  const acctsOfPhone=new Map(); owner.forEach((p,a)=>addSet(acctsOfPhone,p,a));
+  phones.forEach(p=>{
+    const s=mk(); phoneS.set(p,s); s.sharedImei=false;
+    if(victimPhones.has(p)) return;
+    let maxN=0; const others=new Set(); let imeiUsed=null;
+    (phoneImeis.get(p)||[]).forEach(i=>{ const set=imeiPhones.get(i); if(set.size>=2){ set.forEach(o=>{ if(o!==p) others.add(o); }); if(set.size>maxN){maxN=set.size;imeiUsed=i;} } });
+    if(others.size){ s.sharedImei=true; add(s,25,`Same handset (IMEI …${imeiUsed.slice(-6)}) also used with ${[...others].join(', ')}`); }
+    if(maxN>=3) add(s,15,`SIM switching: ${maxN} numbers seen on one handset`);
+    if(spoofers.has(p)) add(s,25,`Called ${spoofers.get(p).size} victim number(s) with a spoofed or VoIP caller ID`);
+    if(cdr.some(r=>r.a===p && victimPhones.has(r.b) && firstOutOf.has(r.b) && firstOutOf.get(r.b)-r.t>=0 && firstOutOf.get(r.b)-r.t<=90*60000))
+      add(s,10,'Call reached a victim within 90 minutes before their first transfer');
+    const fromSpoofer=[...new Set(cdr.filter(r=>r.b===p && spoofers.has(r.a) && r.a!==p).map(r=>r.a))];
+    if(fromSpoofer.length) add(s,15,`Received a call from spoof-linked number ${fromSpoofer.join(', ')}`);
+    let subShared=null, subCount=0;
+    (phoneSubs.get(p)||[]).forEach(sn=>{ const set=subPhones.get(sn); if(set.size>=2 && set.size>subCount){subShared=sn;subCount=set.size-1;} });
+    if(subShared) add(s,10,`Shares network ${subShared} with ${subCount} other number(s). Medium confidence, needs corroboration`);
+  });
+
+  // Cross bonuses: number operates a high-risk account; account owner's number shares a handset.
+  const acctBase=new Map(); acctS.forEach((s,a)=>acctBase.set(a,s.score));
+  phones.forEach(p=>{
+    if(victimPhones.has(p)) return;
+    const hi=[...(acctsOfPhone.get(p)||[])].filter(a=>(acctBase.get(a)||0)>=60);
+    if(hi.length) add(phoneS.get(p),30,`Operates high-risk account ${hi.join(', ')}`);
+  });
+  acctS.forEach((s,a)=>{
+    const p=owner.get(a);
+    if(p && !victims.has(a) && phoneS.get(p) && phoneS.get(p).sharedImei) add(s,15,`Owner number ${p} shares a handset with other numbers`);
+  });
+
+  // Nodes and edges
+  const nodes=new Map();
+  const node=(id,type,label,extra)=>{ if(!nodes.has(id)) nodes.set(id,Object.assign({id,type,label,score:0,reasons:[],victim:false,depth:null},extra||{})); return nodes.get(id); };
+  accounts.forEach(a=>{
+    const s=acctS.get(a); const n=node('A:'+a, cashout.has(a)?'cashout':'account', a, {victim:victims.has(a), depth:depth.has(a)?depth.get(a):null});
+    n.score=Math.min(100,s.score); n.reasons=s.reasons;
+    const ins=inc.get(a)||[], outs=out.get(a)||[]; n.totIn=sum(ins); n.totOut=sum(outs);
+  });
+  phones.forEach(p=>{
+    const s=phoneS.get(p); const n=node('P:'+p,'phone',p,{victim:victimPhones.has(p)});
+    n.score=Math.min(100,s.score); n.reasons=s.reasons;
+  });
+  nodes.forEach(n=>{ n.band = n.victim ? 'victim' : band(n.score); });
+
+  const edges=[];
+  const money=new Map();
+  bank.forEach(x=>{ const k=x.from+'>'+x.to; if(!money.has(k)) money.set(k,{kind:'money',from:'A:'+x.from,to:'A:'+x.to,amt:0,count:0,first:x.t}); const e=money.get(k); e.amt+=x.amt; e.count++; e.first=Math.min(e.first,x.t); });
+  money.forEach(e=>edges.push(e));
+  const calls=new Map();
+  cdr.forEach(r=>{ const k=r.a+'>'+r.b; if(!calls.has(k)) calls.set(k,{kind:'call',from:'P:'+r.a,to:'P:'+r.b,count:0,dur:0,spoof:0}); const e=calls.get(k); e.count++; e.dur+=r.dur; if(r.cli!=='NORMAL') e.spoof++; });
+  calls.forEach(e=>edges.push(e));
+  owner.forEach((p,a)=>{ if(nodes.has('P:'+p)) edges.push({kind:'owns',from:'P:'+p,to:'A:'+a}); });
+  imeiPhones.forEach((set,imei)=>{ if(set.size>=2){ node('D:'+imei,'device','IMEI …'+imei.slice(-6),{imei}); set.forEach(p=>edges.push({kind:'uses',from:'P:'+p,to:'D:'+imei})); } });
+  subPhones.forEach((set,sn)=>{ if(set.size>=2){ node('N:'+sn,'subnet',sn); set.forEach(p=>edges.push({kind:'subnet',from:'P:'+p,to:'N:'+sn})); } });
+
+  // Clusters (connected components)
+  const parent=new Map(); nodes.forEach((_,id)=>parent.set(id,id));
+  const find=x=>{ while(parent.get(x)!==x){ parent.set(x,parent.get(parent.get(x))); x=parent.get(x);} return x; };
+  edges.forEach(e=>{ if(parent.has(e.from)&&parent.has(e.to)) parent.set(find(e.from),find(e.to)); });
+  const comp=new Map(); nodes.forEach((n,id)=>{ const r=find(id); if(!comp.has(r)) comp.set(r,[]); comp.get(r).push(n); });
+  const clusters=[...comp.values()].map(list=>({
+    nodes:list.map(n=>n.id),
+    maxScore:Math.max(0,...list.filter(n=>!n.victim).map(n=>n.score)),
+    victims:list.filter(n=>n.victim&&n.type==='account').length,
+    phones:list.filter(n=>n.type==='phone').length,
+    accounts:list.filter(n=>n.type==='account'||n.type==='cashout').length,
+    loss:sum(bank.filter(x=>victims.has(x.from)&&list.some(n=>n.id==='A:'+x.to)))
+  })).sort((a,b)=>b.maxScore-a.maxScore);
+  clusters.forEach((c,i)=>{ c.name='Cluster '+String.fromCharCode(65+i); c.nodes.forEach(id=>nodes.get(id).cluster=c.name); });
+
+  // Links found (with confidence and the basis for each)
+  const corr=[];
+  imeiPhones.forEach((set,imei)=>{ if(set.size>=2) corr.push({kind:'Shared handset',key:'IMEI '+imei,entities:[...set],confidence:'High',basis:`Same IMEI recorded under ${set.size} numbers (${(imeiImsi.get(imei)||new Set()).size} different IMSIs). Exact identifier match.`}); });
+  subPhones.forEach((set,sn)=>{ if(set.size>=2) corr.push({kind:'Common network',key:sn,entities:[...set],confidence:'Medium',basis:'Same IPv4 /24 seen in IPDR. Ranges can be shared by unrelated subscribers, so treat as a lead and corroborate.'}); });
+  inc.forEach((arr,a)=>{ const senders=new Set(arr.map(x=>x.from)); if(senders.size>=2) corr.push({kind:'Recurring beneficiary',key:a,entities:[...senders,a],confidence:'High',basis:`${senders.size} different senders paid this handle. Exact UPI handle match in the settlement sheet.`}); });
+
+  // Timeline
+  const flagged=id=>{ const n=nodes.get('A:'+id); return n && (n.victim || n.score>=30); };
+  const timeline=[];
+  cdr.forEach(r=>{
+    const spoofToVictim=r.cli!=='NORMAL' && victimPhones.has(r.b);
+    const between=(nodes.get('P:'+r.a)?.score||0)>=30 && (nodes.get('P:'+r.b)?.score||0)>=30;
+    if(spoofToVictim) timeline.push({t:r.t,type:'call',text:`Spoofed call ${r.a} → victim ${r.b} (${r.dur}s)`});
+    else if(between) timeline.push({t:r.t,type:'call',text:`Call ${r.a} → ${r.b} (${r.dur}s)`});
+  });
+  bank.forEach(x=>{ if(flagged(x.from)||flagged(x.to)) timeline.push({t:x.t,type:'money',text:`${inr(x.amt)} ${x.from} → ${x.to} (${x.ch||'transfer'})`}); });
+  timeline.sort((a,b)=>a.t-b.t);
+
+  // Seizure and follow-up recommendations
+  const recs=[];
+  const acctNodes=[...nodes.values()].filter(n=>n.type==='account'&&!n.victim&&n.score>=60).sort((a,b)=>b.score-a.score);
+  acctNodes.forEach(n=>{ const net=n.totIn-n.totOut; recs.push({action:'Freeze or place lien',target:n.label,why:`risk ${n.score}; ${net>0?'about '+inr(net)+' may still be in the account':'balance appears drained, request statement and KYC'}`}); });
+  [...nodes.values()].filter(n=>n.type==='cashout').forEach(n=>recs.push({action:'Trace cash-out',target:n.label,why:`${inr(n.totIn)} received; request CCTV, terminal or exchange KYC and beneficiary details`}));
+  imeiPhones.forEach((set,imei)=>{ if(set.size>=2) recs.push({action:'Locate handset',target:'IMEI '+imei,why:`used with ${set.size} numbers (${[...set].join(', ')}); request tower dump and locate or seize the device`}); });
+  [...nodes.values()].filter(n=>n.type==='phone'&&!n.victim&&n.score>=60).sort((a,b)=>b.score-a.score).forEach(n=>recs.push({action:'Get subscriber KYC and IP logs',target:n.label,why:n.reasons[0]?n.reasons[0].text:''}));
+
+  const victimLoss=sum(bank.filter(x=>victims.has(x.from)));
+  const cashed=sum(bank.filter(x=>cashout.has(x.to)));
+  const nodeArr=[...nodes.values()];
+  return {
+    nodes:nodeArr, edges, clusters, corr, timeline, recs, warnings,
+    victims:[...victims], counts:{cdr:cdr.length,bank:bank.length,ipdr:ipdr.length},
+    summary:{victimLoss,cashed,highRisk:nodeArr.filter(n=>!n.victim&&n.score>=60).length,victimCount:victims.size,linkCount:corr.length}
+  };
+}
+
+function buildReport(res, evidence, nowMs){
+  const suspects=res.nodes.filter(n=>!n.victim&&n.score>=60&&(n.type==='phone'||n.type==='account')).sort((a,b)=>b.score-a.score)
+    .map(n=>({id:n.label,type:n.type,risk:n.score,cluster:n.cluster,reasons:n.reasons.map(r=>r.text)}));
+  return {
+    tool:TOOL, generatedUtc:new Date(nowMs).toISOString(),
+    evidence:evidence.map(e=>({file:e.name,type:e.type,bytes:e.bytes,rows:e.rows,sha256:e.sha})),
+    summary:{victims:res.victims,victimLoss:res.summary.victimLoss,cashedOut:res.summary.cashed,highRiskEndpoints:res.summary.highRisk},
+    primeSuspects:suspects,
+    clusters:res.clusters.filter(c=>c.maxScore>=30).map(c=>({name:c.name,maxRisk:c.maxScore,accounts:c.accounts,phones:c.phones,victims:c.victims,lossTraced:c.loss})),
+    links:res.corr, timeline:res.timeline.map(e=>({time:fmtT(e.t),event:e.text})), recommendations:res.recs,
+    caveats:['Links are exact-match on identifiers in the supplied records; medium-confidence links are marked.','Risk scores are rule-based leads for triage, not findings of guilt.']
+  };
+}
+//</ENGINE>
+
+/* ---------- UI ---------- */
+const $ = id => document.getElementById(id);
+const esc = s => String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const enc = new TextEncoder();
+const state = { files:[], result:null, report:null, selected:null, custody:[], layout:null };
+/* Dark-theme risk colours matching the app palette */
+const COLORS = { high:'#EF4444', medium:'#F59E0B', low:'#9CA3AF', victim:'#3B82F6' };
+
+async function sha256Hex(buf){
+  if(!(window.crypto && crypto.subtle)) return 'unavailable: open over https or localhost';
+  const h = await crypto.subtle.digest('SHA-256', buf);
+  return [...new Uint8Array(h)].map(b=>b.toString(16).padStart(2,'0')).join('');
+}
+const utc = () => new Date().toISOString().replace('T',' ').slice(0,19)+'Z';
+function logCustody(text){ state.custody.push(`${utc()}  ${text}`); renderCustody(); }
+function renderCustody(){
+  $('custody').innerHTML = state.custody.length ? state.custody.map(t=>`<li>${esc(t)}</li>`).join('') : '<li class="muted">No evidence loaded.</li>';
+}
+
+async function ingest(name, buf){
+  const text = new TextDecoder('utf-8').decode(buf);
+  const parsed = parseCSV(text);
+  const type = detectType(parsed.headers);
+  const sha = await sha256Hex(buf);
+  if(!type){ logCustody(`REJECTED ${name}: columns not recognised as CDR, IPDR or bank sheet. SHA-256 ${sha}`); showWarn(`${name} was not recognised. Check the column names listed on the right.`); return; }
+  state.files = state.files.filter(f=>f.type!==type);
+  state.files.push({name,type,buf,bytes:buf.byteLength,rows:parsed.records.length,records:parsed.records,sha});
+  logCustody(`INGEST ${type.toUpperCase()} ${name} ${buf.byteLength} bytes SHA-256 ${sha}`);
+}
+function showWarn(msg){ $('warnings').innerHTML = msg ? `<div class="warn">${esc(msg)}</div>` : ''; }
+
+async function handleFiles(list){
+  showWarn('');
+  for(const f of list){ await ingest(f.name, await f.arrayBuffer()); }
+  runAnalysis();
+}
+async function loadSample(){
+  showWarn(''); state.files=[]; 
+  for(const [k,txt] of Object.entries(SAMPLE)){ await ingest(`${k}_sample.csv`, enc.encode(txt).buffer); }
+  runAnalysis();
+}
+function clearAll(){
+  state.files=[]; state.result=null; state.report=null; state.custody=[]; showWarn('');
+  renderCustody(); renderEvidence(); $('results').hidden=true; $('empty').hidden=false;
+}
+
+function renderEvidence(){
+  $('evList').innerHTML = state.files.map((f,i)=>`
+    <li>
+      <div class="nm">${esc(f.name)}</div>
+      <div class="meta">${f.type.toUpperCase()} · ${f.rows} rows · ${f.bytes} bytes</div>
+      <div class="hash">SHA-256 ${esc(f.sha)}</div>
+      <button class="ver" type="button" data-verify="${i}">Re-verify hash</button> <span id="vr${i}" class="small"></span>
+    </li>`).join('');
+}
+async function verify(i){
+  const f=state.files[i]; const again=await sha256Hex(f.buf);
+  const ok = again===f.sha;
+  $('vr'+i).innerHTML = ok ? '<span class="okmark">Match. File is unchanged since ingest.</span>' : '<span style="color:var(--hi);font-weight:600">MISMATCH</span>';
+  logCustody(`VERIFY ${f.name} ${ok?'match':'MISMATCH'}`);
+}
+
+let analysisSeq = 0;
+async function runAnalysis(){
+  renderEvidence();
+  if(!state.files.length){ $('results').hidden=true; $('empty').hidden=false; return; }
+  const seq = ++analysisSeq;
+  const data={}; state.files.forEach(f=>data[f.type]=f.records);
+  const res = analyze(data);
+  state.result = res;
+  logCustody(`ANALYSE ${res.counts.cdr} CDR, ${res.counts.bank} bank, ${res.counts.ipdr} IPDR records → ${res.nodes.length} entities, ${res.corr.length} links`);
+  if(res.warnings.length) showWarn(res.warnings.slice(0,3).join(' ') + (res.warnings.length>3?` (+${res.warnings.length-3} more)`:''));
+  const rep = buildReport(res, state.files, Date.now());
+  const body = JSON.stringify(rep);
+  rep.reportSha256 = await sha256Hex(enc.encode(body).buffer);
+  if(seq !== analysisSeq) return;
+  state.report = rep;
+  $('empty').hidden=true; $('results').hidden=false;
+  state.layout = null;
+  const top = res.nodes.filter(n=>!n.victim).sort((a,b)=>b.score-a.score)[0];
+  state.selected = top ? top.id : null;
+  renderAll();
+}
+
+function renderAll(){
+  renderStats(); renderPlainSummary(); renderGraph(); renderDetail(); renderRanked(); renderCorr(); renderBrief();
+}
+
+function renderPlainSummary(){
+  const s=state.result.summary;
+  const ns=state.result.nodes;
+  const muleAccts=ns.filter(n=>!n.victim&&n.type==='account'&&n.score>=30).length;
+  const cashoutPts=ns.filter(n=>n.type==='cashout').length;
+  const sharedImei=state.result.corr.filter(x=>x.kind==='Shared handset').length;
+  const sharedPhones=state.result.corr.filter(x=>x.kind==='Shared handset').reduce((t,x)=>t+x.entities.length,0);
+  let txt=`${s.victimCount} victim${s.victimCount!==1?'s':''} lost ${inr(s.victimLoss)}. `;
+  if(muleAccts>0) txt+=`The money passed through ${muleAccts} mule account${muleAccts!==1?'s':''} `;
+  if(cashoutPts>0) txt+=`and left through ${cashoutPts} cash-out point${cashoutPts!==1?'s':''} (${inr(s.cashed)}). `;
+  if(sharedImei>0) txt+=`${sharedPhones} phone number${sharedPhones!==1?'s':''} shared the same handset (<abbr title="International Mobile Equipment Identity">IMEI</abbr>). `;
+  if(s.linkCount>0) txt+=`${s.linkCount} entity link${s.linkCount!==1?'s':''} found.`;
+  $('plainSummary').innerHTML = txt;
+}
+
+function renderStats(){
+  const s=state.result.summary;
+  $('stats').innerHTML = `
+    <div class="stat"><b>${inr(s.victimLoss)}</b><span>Lost by ${s.victimCount} victim account(s)</span></div>
+    <div class="stat"><b>${inr(s.cashed)}</b><span>Reached cash-out points</span></div>
+    <div class="stat hi"><b>${s.highRisk}</b><span>High-risk endpoints (score 60+)</span></div>
+    <div class="stat"><b>${s.linkCount}</b><span>Entity links found</span></div>`;
+}
+
+/* Graph: small deterministic force layout with a left-to-right bias for the money chain */
+function computeLayout(res, W, H){
+  let seed=11; const rnd=()=> (seed=(seed*16807)%2147483647)/2147483647;
+  const ns=res.nodes; const idx=new Map(); ns.forEach((n,i)=>idx.set(n.id,i));
+  const maxD=Math.max(1,...ns.map(n=>n.depth||0));
+  ns.forEach(n=>{ n.x=60+rnd()*(W-120); n.y=50+rnd()*(H-100); n.vx=0; n.vy=0; });
+  const es=res.edges.filter(e=>idx.has(e.from)&&idx.has(e.to));
+  for(let it=0; it<450; it++){
+    const cool = 1 - it/450;
+    for(let i=0;i<ns.length;i++) for(let j=i+1;j<ns.length;j++){
+      let dx=ns[i].x-ns[j].x, dy=ns[i].y-ns[j].y; let d2=dx*dx+dy*dy+0.01; const d=Math.sqrt(d2);
+      const f=5200/d2; dx/=d; dy/=d;
+      ns[i].vx+=dx*f; ns[i].vy+=dy*f; ns[j].vx-=dx*f; ns[j].vy-=dy*f;
+    }
+    es.forEach(e=>{
+      const a=ns[idx.get(e.from)], b=ns[idx.get(e.to)];
+      const rest = e.kind==='money'?120: e.kind==='call'?170: 90;
+      let dx=b.x-a.x, dy=b.y-a.y; const d=Math.sqrt(dx*dx+dy*dy)+0.01; const f=(d-rest)*0.03;
+      dx/=d; dy/=d; a.vx+=dx*f; a.vy+=dy*f; b.vx-=dx*f; b.vy-=dy*f;
+    });
+    ns.forEach(n=>{
+      if((n.type==='account'||n.type==='cashout') && n.depth!==null){
+        const tx = 90 + (n.depth/maxD)*(W-180); n.vx += (tx-n.x)*0.05;
+      }
+      n.vx += (W/2-n.x)*0.004; n.vy += (H/2-n.y)*0.006;
+      n.x += Math.max(-25,Math.min(25,n.vx))*cool; n.y += Math.max(-25,Math.min(25,n.vy))*cool;
+      n.vx*=0.6; n.vy*=0.6;
+      n.x=Math.max(60,Math.min(W-60,n.x)); n.y=Math.max(40,Math.min(H-40,n.y));
+    });
+  }
+}
+
+function shapeSvg(n, sel){
+  const c = COLORS[n.band]; const st=`class="shape" fill="${c}" stroke="#1a2436" stroke-width="2"`;
+  if(n.type==='phone') return `<circle ${st} r="10"/>`;
+  if(n.type==='account') return `<rect ${st} x="-13" y="-9" width="26" height="18" rx="4"/>`;
+  if(n.type==='cashout') return `<rect ${st} x="-12" y="-12" width="24" height="24" rx="2" transform="rotate(45)"/>`;
+  /* Device/subnet nodes: light fill with visible border on dark background */
+  if(n.type==='device') return `<polygon class="shape" fill="#CBD5E1" stroke="#64748B" stroke-width="2" points="0,-11 11,0 0,11 -11,0"/>`;
+  return `<polygon class="shape" fill="#CBD5E1" stroke="#64748B" stroke-width="2" points="-6,-10 6,-10 12,0 6,10 -6,10 -12,0"/>`;
+}
+
+function renderGraph(){
+  const W=1000,H=560, res=state.result;
+  if(!state.layout){ computeLayout(res,W,H); state.layout=true; }
+  const showCalls=$('tgCalls').checked, showLinks=$('tgLinks').checked;
+  const byId=new Map(res.nodes.map(n=>[n.id,n]));
+  const hidden=n=> !showLinks && (n.type==='device'||n.type==='subnet');
+  /* Arrows: white-ish money arrow, teal call arrow — visible on dark graph background */
+  let svg = `<defs>
+    <marker id="arM" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#E2E8F0"/></marker>
+    <marker id="arC" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#38BDF8"/></marker>
+  </defs>`;
+  const trim=(a,b,r)=>{ const dx=b.x-a.x, dy=b.y-a.y, d=Math.sqrt(dx*dx+dy*dy)||1; return {x1:a.x+dx/d*r,y1:a.y+dy/d*r,x2:b.x-dx/d*r,y2:b.y-dy/d*r,mx:(a.x+b.x)/2,my:(a.y+b.y)/2}; };
+  res.edges.forEach(e=>{
+    const a=byId.get(e.from), b=byId.get(e.to); if(!a||!b||hidden(a)||hidden(b)) return;
+    if(e.kind==='call' && !showCalls) return;
+    if((e.kind==='uses'||e.kind==='subnet') && !showLinks) return;
+    const t=trim(a,b,e.kind==='money'||e.kind==='call'?17:12);
+    if(e.kind==='money'){
+      const w=Math.min(5,1.5+Math.log10(e.amt)/2);
+      /* Light-grey money arrows, readable on dark graph */
+      svg+=`<line x1="${t.x1}" y1="${t.y1}" x2="${t.x2}" y2="${t.y2}" stroke="#E2E8F0" stroke-width="${w}" marker-end="url(#arM)"/>`;
+    } else if(e.kind==='call'){
+      svg+=`<line x1="${t.x1}" y1="${t.y1}" x2="${t.x2}" y2="${t.y2}" stroke="#38BDF8" stroke-width="${e.spoof?2:1.3}" stroke-dasharray="${e.spoof?'7 3':'3 3'}" marker-end="url(#arC)"/>`;
+    } else {
+      svg+=`<line x1="${t.x1}" y1="${t.y1}" x2="${t.x2}" y2="${t.y2}" stroke="#4B5563" stroke-width="1.2" stroke-dasharray="1.5 3.5"/>`;
+    }
+  });
+  res.edges.filter(e=>e.kind==='money').forEach(e=>{
+    const a=byId.get(e.from), b=byId.get(e.to); if(!a||!b) return;
+    svg+=`<text class="amt" x="${(a.x+b.x)/2}" y="${(a.y+b.y)/2-5}" text-anchor="middle">${inr(e.amt)}</text>`;
+  });
+  res.nodes.forEach(n=>{
+    if(hidden(n)) return;
+    const sel = n.id===state.selected ? ' sel':'';
+    const lbl = n.type==='account'||n.type==='cashout' ? n.label : n.label;
+    svg+=`<g class="node${sel}" data-id="${esc(n.id)}" tabindex="0" role="button" aria-label="${esc(n.label)}, ${n.victim?'victim':'risk '+n.score}" transform="translate(${n.x.toFixed(1)},${n.y.toFixed(1)})">
+      ${shapeSvg(n)}<text class="lbl" y="${n.type==='cashout'?26:24}" text-anchor="middle">${esc(lbl)}</text></g>`;
+  });
+  $('graph').innerHTML = svg;
+  $('legend').innerHTML = `
+    <span><i style="background:${COLORS.victim}"></i>Victim</span>
+    <span><i style="background:${COLORS.high}"></i>High risk 60+</span>
+    <span><i style="background:${COLORS.medium}"></i>Medium 30-59</span>
+    <span><i style="background:${COLORS.low}"></i>Low</span>
+    <span>Circle: phone. Rounded box: account/UPI. Diamond: <abbr title="Where funds leave the banking network: ATM, crypto or wallet cash-out">cash-out</abbr>. Open diamond: shared <abbr title="International Mobile Equipment Identity — the handset">IMEI</abbr>. Hexagon: shared <abbr title="/24 block of ~256 nearby IP addresses">/24</abbr> net.</span>
+    <span>Solid arrow: money flow (thicker = more). Dashed teal: call (long dash = spoofed). Dotted grey: shared device/network.</span>`;
+}
+
+function renderDetail(){
+  const n = state.result.nodes.find(x=>x.id===state.selected);
+  if(!n){ $('detail').innerHTML=''; return; }
+  const kind={phone:'Phone number',account:'Account or UPI handle',cashout:'Cash-out point',device:'Shared handset',subnet:'Shared network'}[n.type];
+  const pill = n.victim ? '<span class="pill victim">Victim</span>' : (n.type==='device'||n.type==='subnet') ? '' : `<span class="pill ${n.band}">${n.band} risk ${n.score}</span>`;
+  const reasons = n.victim ? '<li>Complaint victim: money left this account after a spoofed or VoIP caller ID call. Used as the start of the fund trail.</li>'
+    : n.reasons.length ? n.reasons.map(r=>`<li>${esc(r.text)} <span class="muted">(+${r.pts})</span></li>`).join('')
+    : '<li class="muted">No anomaly rules fired for this endpoint.</li>';
+  const extra = (n.totIn!==undefined && (n.totIn||n.totOut)) ? `<p class="small muted">Received ${inr(n.totIn)}, sent ${inr(n.totOut)}.</p>`:'';
+  $('detail').innerHTML = `<h3>${esc(n.label)} ${pill}</h3><p class="small muted">${kind} · ${esc(n.cluster||'')}</p>${extra}<ul class="reasons">${reasons}</ul>`;
+}
+
+function renderRanked(){
+  const rows = state.result.nodes.filter(n=>!n.victim&&(n.type==='phone'||n.type==='account'||n.type==='cashout')&&n.score>0).sort((a,b)=>b.score-a.score);
+  const typeName={phone:'Phone',account:'Account',cashout:'Cash-out'};
+  $('ranked').innerHTML = rows.length ? rows.map(n=>`
+    <tr data-id="${esc(n.id)}" tabindex="0">
+      <td class="mono">${esc(n.label)}</td><td>${typeName[n.type]}</td>
+      <td><span class="bar" style="width:${n.score*0.7}px;background:${COLORS[n.band]}"></span>${n.score}</td>
+      <td>${n.reasons.slice(0,2).map(r=>esc(r.text)).join('<br>')}</td></tr>`).join('')
+    : '<tr><td colspan="4" class="muted">No endpoint triggered a risk rule.</td></tr>';
+}
+
+function renderCorr(){
+  const c=state.result.corr;
+  $('corr').innerHTML = c.length ? c.map(x=>`
+    <div class="corr"><span class="k">${esc(x.kind)}: ${esc(x.key)}</span><span class="conf ${x.confidence}">${x.confidence} confidence</span>
+    <div class="mono" style="margin:4px 0">${x.entities.map(esc).join(' · ')}</div>
+    <div class="small muted">${esc(x.basis)}</div></div>`).join('')
+    : '<p class="muted">No shared identifiers found in the supplied records.</p>';
+}
+
+function renderBrief(){
+  const r=state.report, res=state.result;
+  const tl=res.timeline; const cap=16; const shown=tl.slice(0,cap);
+  const cl=r.clusters;
+  $('brief').innerHTML = `
+    <div class="hd"><h2>Investigative brief</h2><span class="small muted">Generated ${esc(r.generatedUtc)} by ${esc(r.tool.name)} ${esc(r.tool.version)}</span></div>
+    <p class="small">Victim loss ${inr(r.summary.victimLoss)} · reached cash-out ${inr(r.summary.cashedOut)} · ${r.summary.highRiskEndpoints} high-risk endpoints</p>
+    <h3>Prime suspects</h3>
+    <ol>${r.primeSuspects.slice(0,6).map(s=>`<li><b class="mono">${esc(s.id)}</b> (${s.type}, risk ${s.risk}, ${esc(s.cluster||'')}): ${esc(s.reasons.slice(0,2).join('; '))}</li>`).join('')||'<li>None above the high-risk threshold.</li>'}</ol>
+    <h3>Linked clusters</h3>
+    <ul>${cl.map(c=>`<li><b>${esc(c.name)}</b>: ${c.accounts} accounts, ${c.phones} numbers, ${c.victims} victim(s), highest risk ${c.maxRisk}, traced loss ${inr(c.lossTraced)}</li>`).join('')||'<li>No cluster above the medium threshold.</li>'}</ul>
+    <h3>Timeline</h3>
+    <ul>${shown.map(e=>`<li><span class="mono">${esc(fmtT(e.t))}</span> ${esc(e.text)}</li>`).join('')}${tl.length>cap?`<li class="muted">${tl.length-cap} more events in the JSON export.</li>`:''}</ul>
+    <h3>Immediate action</h3>
+    <ul>${r.recommendations.slice(0,8).map(x=>`<li><b>${esc(x.action)}:</b> <span class="mono">${esc(x.target)}</span>. ${esc(x.why)}</li>`).join('')}</ul>
+    <h3>Evidence integrity</h3>
+    <ul>${r.evidence.map(e=>`<li>${esc(e.file)} (${e.rows} rows): <span class="hashline">SHA-256 ${esc(e.sha256)}</span></li>`).join('')}</ul>
+    <p class="hashline" style="margin-top:6px">Report SHA-256 ${esc(r.reportSha256||'')}</p>
+    <p class="small muted" style="margin-top:6px">${esc(r.caveats.join(' '))}</p>`;
+}
+
+function download(name, text, mime){
+  const url=URL.createObjectURL(new Blob([text],{type:mime}));
+  const a=document.createElement('a'); a.href=url; a.download=name; document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(()=>URL.revokeObjectURL(url),1000);
+}
+
+/* wiring */
+function selectNode(id){ state.selected=id; renderGraph(); renderDetail(); }
+document.addEventListener('click',e=>{
+  const g=e.target.closest('.node'); if(g){ selectNode(g.dataset.id); return; }
+  const tr=e.target.closest('#ranked tr[data-id]'); if(tr){ selectNode(tr.dataset.id); $('graph').scrollIntoView({block:'center',behavior:'smooth'}); return; }
+  const v=e.target.closest('[data-verify]'); if(v){ verify(Number(v.dataset.verify)); }
+});
+document.addEventListener('keydown',e=>{
+  if(e.key!=='Enter'&&e.key!==' ') return;
+  const g=e.target.closest&&e.target.closest('.node'); if(g){ e.preventDefault(); selectNode(g.dataset.id); return; }
+  const tr=e.target.closest&&e.target.closest('#ranked tr[data-id]'); if(tr){ e.preventDefault(); selectNode(tr.dataset.id); }
+});
+$('file').addEventListener('change',e=>{ handleFiles([...e.target.files]); e.target.value=''; });
+const drop=$('drop');
+['dragenter','dragover'].forEach(ev=>drop.addEventListener(ev,e=>{e.preventDefault();drop.classList.add('over');}));
+['dragleave','drop'].forEach(ev=>drop.addEventListener(ev,e=>{e.preventDefault();drop.classList.remove('over');}));
+drop.addEventListener('drop',e=>handleFiles([...e.dataTransfer.files]));
+$('btnSample').addEventListener('click',loadSample);
+$('btnClear').addEventListener('click',clearAll);
+$('tgCalls').addEventListener('change',()=>state.result&&renderGraph());
+$('tgLinks').addEventListener('change',()=>state.result&&renderGraph());
+$('btnPrint').addEventListener('click',()=>{ logCustody('EXPORT brief printed or saved as PDF'); window.print(); });
+$('btnJson').addEventListener('click',()=>{ logCustody('EXPORT brief downloaded as JSON'); download('investigative-brief.json', JSON.stringify(state.report,null,2),'application/json'); });
+
+(function init(){
+  $('hashState').textContent = (window.crypto&&crypto.subtle) ? 'SHA-256 evidence hashing: ready' : 'SHA-256 unavailable: use https or localhost';
+  $('sampleLinks').innerHTML = Object.entries(SAMPLE).map(([k,txt])=>{
+    const url=URL.createObjectURL(new Blob([txt],{type:'text/csv'}));
+    return `<a href="${url}" download="${k}_sample.csv">${k}_sample.csv</a>`;
+  }).join('');
+})();
+</script>
+</body>
+</html>

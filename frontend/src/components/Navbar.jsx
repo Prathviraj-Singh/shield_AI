@@ -14,6 +14,7 @@ export default function Navbar() {
     { name: 'Dashboard', path: '/dashboard' },
     { name: 'Scan', path: '/scan' },
     { name: 'Reports', path: '/reports' },
+    { name: 'Trace (Police)', path: '/trace' },
   ];
 
   return (

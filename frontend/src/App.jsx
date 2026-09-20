@@ -1,4 +1,4 @@
-import React from 'react';
+﻿import React from 'react';
 import { BrowserRouter, Routes, Route, Navigate, Link } from 'react-router-dom';
 import { useAuth } from './hooks/useAuth';
 import Navbar from './components/Navbar';
@@ -8,6 +8,7 @@ import Dashboard from './pages/Dashboard';
 import Reports from './pages/Reports';
 
 import Home from './pages/Home';
+import Trace from './pages/Trace';
 
 const ProtectedRoute = ({ children }) => {
   const { currentUser, loading } = useAuth();
@@ -37,6 +38,7 @@ export default function App() {
           <Routes>
             <Route path="/" element={<Home />} />
             <Route path="/login" element={<Login />} />
+            <Route path="/trace" element={<Trace />} />
             <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
             <Route path="/scan" element={<ProtectedRoute><ScanMessage /></ProtectedRoute>} />
             <Route path="/reports" element={<ProtectedRoute><Reports /></ProtectedRoute>} />
@@ -46,3 +48,4 @@ export default function App() {
     </BrowserRouter>
   );
 }
+
